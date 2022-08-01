@@ -1,0 +1,83 @@
+version: "3"
+
+services:
+  web:
+    container_name: digima_nginx
+    build:
+      context: .
+      dockerfile: ./docker/nginx/Dockerfile
+      args:
+        - TZ=Asia/Tokyo
+    volumes:
+      - ./docker/nginx/conf.d:/usr/local/etc/nginx/conf.d
+      - ./laravel:/var/www/laravel
+    ports:
+      - 80:80
+    links:
+      - app
+    depends_on:
+      - app
+  
+  app:
+    container_name: digima_backend
+    build:
+      context: .
+      dockerfile: ./docker/php/Dockerfile
+    volumes:
+      - ./laravel:/var/www/laravel
+    links:
+      - database
+    environment:
+      - TZ=Asia/Tokyo
+    ports:
+      - 8000:8000
+    
+  database:
+    container_name: digima_db
+    image: mysql:5.7
+    environment:
+      - MYSQL_DATABASE=digima_db
+      - MYSQL_PASSWORD=root
+      - MYSQL_ROOT_PASSWORD=root
+      - TZ=Asia/Tokyo
+    ports:
+      - 3306:3306
+
+  phpmyadmin:
+    container_name: digima_phpmyadmin
+    image: phpmyadmin/phpmyadmin
+    environment:
+      - PMA_HOSTS=digima_db
+      - PMA_USER=root
+      - PMA_PASSWORD=root
+    ports:
+      - 8080:80
+  
+  front_app:
+    container_name: digima_frontend
+    build:
+      context: .
+      dockerfile: ./docker/node/Dockerfile
+      args:
+        - TZ=Asia/Tokyo
+    volumes:
+      - ./nuxt:/var/www/nuxt
+    ports:
+      - 3000:3000
+    links:
+      - web
+    depends_on:
+      - web
+# 開発メールテスト用
+  mail:
+    image: mailhog/mailhog
+    container_name: mail
+    ports:
+      - 8025:8025
+
+  redis:
+      image: "redis:latest"
+      ports:
+          - "6379:6379"
+      volumes:
+          - "./data/redis:/data"
